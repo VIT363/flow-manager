@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: flow-manager
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/flow_manager}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.add.type.headers: false
+    consumer:
+      group-id: ${KAFKA_CONSUMER_GROUP:flow-manager-group}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JsonDeserializer
+        spring.json.value.default.type: com.vitzemtsov.common.events.FileConvertedEvent
+        spring.json.trusted.packages: com.vitzemtsov.flowmanager,com.vitzemtsov.common.events
+
+server:
+  port: ${SERVER_PORT:8081}
+
+kafka:
+  topics:
+    to-convert: ${KAFKA_TOPIC_TO_CONVERT:to-convert}
+    converted: ${KAFKA_TOPIC_CONVERTED:converted}
+
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket: ${MINIO_BUCKET:files}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  info:
+    env:
+      enabled: true
+
+logging:
+  level:
+    com.vitzemtsov.flowmanager: INFO
+
+info:
+  app:
+    name: flow-manager
+    version: 1.0.0
