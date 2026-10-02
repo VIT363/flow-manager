@@ -11,17 +11,25 @@ import com.vitzemtsov.flowmanager.exception.client.FileNotReadyException;
 import com.vitzemtsov.flowmanager.exception.server.FileUploadException;
 import com.vitzemtsov.flowmanager.exception.server.MinioOperationException;
 import com.vitzemtsov.flowmanager.kafka.producer.FileConversionProducer;
+import com.vitzemtsov.flowmanager.minio.MinioProperties;
 import com.vitzemtsov.flowmanager.minio.MinioService;
 import com.vitzemtsov.flowmanager.repository.FileRepository;
 import com.vitzemtsov.flowmanager.util.ObjectNameGenerator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Slf4j
@@ -33,6 +41,7 @@ public class FileService {
     private final FileRepository fileRepository;
     private final ObjectNameGenerator objectNameGenerator;
     private final FileConversionProducer fileConversionProducer;
+    private final MinioProperties minioProperties;
 
     @Transactional
     public FileUploadResponse upload(MultipartFile file) {
@@ -49,16 +58,18 @@ public class FileService {
             throw new FileUploadException("Failed to upload file to MinIO: " + objectName, e);
         }
 
+        String bucket = minioProperties.bucket();
+
         FileEntity entity = new FileEntity();
         entity.setId(fileId);
         entity.setOriginalFileName(file.getOriginalFilename());
-        entity.setSourceBucket(minioService.getBucket());
+        entity.setSourceBucket(bucket);
         entity.setSourceObjectName(objectName);
         entity.setStatus(FileStatus.PROCESSING);
         fileRepository.save(entity);
 
         fileConversionProducer.send(new FileConversionRequest(
-                fileId, minioService.getBucket(), objectName
+                fileId, bucket, objectName
         ));
 
         log.info("File uploaded, event sent to to-convert: id={}, objectName={}", fileId, objectName);
@@ -79,7 +90,7 @@ public class FileService {
         );
     }
 
-    public DownloadResult download(UUID id) {
+    public ResponseEntity<@NonNull InputStreamResource> download(UUID id) {
         FileEntity entity = fileRepository.findById(id)
                 .orElseThrow(() -> new FileNotFoundException(id));
 
@@ -90,12 +101,20 @@ public class FileService {
         String bucket = entity.getConvertedBucket();
         String object = entity.getConvertedObjectName();
 
-        InputStream stream = minioService.download(bucket, object);
         long size = minioService.statSize(bucket, object);
+        InputStream stream = minioService.download(bucket, object);
 
         String downloadName = buildPdfFileName(entity.getOriginalFileName());
 
-        return new DownloadResult(stream, size, downloadName);
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(downloadName, StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(size)
+                .body(new InputStreamResource(stream));
     }
 
     private static String buildPdfFileName(String originalFileName) {
@@ -107,8 +126,5 @@ public class FileService {
         String base = (dot > 0) ? originalFileName.substring(0, dot) : originalFileName;
 
         return base + ".pdf";
-    }
-
-    public record DownloadResult(InputStream stream, long size, String fileName) {
     }
 }

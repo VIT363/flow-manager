@@ -1,4 +1,4 @@
-package com.vitzemtsov.flowmanager.kafka.consumer;
+package com.vitzemtsov.flowmanager.service;
 
 import com.vitzemtsov.common.events.ConversionStatus;
 import com.vitzemtsov.common.events.FileConvertedEvent;
@@ -9,20 +9,18 @@ import com.vitzemtsov.flowmanager.exception.kafka.InvalidFileConvertedEventExcep
 import com.vitzemtsov.flowmanager.repository.FileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-@Component
-@RequiredArgsConstructor
 @Slf4j
-public class FileConvertedConsumer {
+@Service
+@RequiredArgsConstructor
+public class FileConversionService {
 
     private final FileRepository fileRepository;
 
     @Transactional
-    @KafkaListener(topics = "${kafka.topics.converted}")
-    public void consume(FileConvertedEvent event) {
+    public void applyResult(FileConvertedEvent event) {
 
         if (event == null || event.fileId() == null) {
             throw new InvalidFileConvertedEventException(
@@ -31,31 +29,25 @@ public class FileConvertedConsumer {
         }
 
         FileEntity file = fileRepository.findById(event.fileId())
-                .orElseThrow(() ->
-                        new FileNotFoundException(event.fileId())
-                );
+                .orElseThrow(() -> new FileNotFoundException(event.fileId()));
 
-        if (file.getStatus() == FileStatus.SUCCESS ||
-                file.getStatus() == FileStatus.ERROR) {
+        if (file.getStatus() == FileStatus.SUCCESS
+                || file.getStatus() == FileStatus.ERROR) {
 
             log.info(
                     "File already processed, ignoring duplicate event: id={}, status={}",
                     event.fileId(),
                     file.getStatus()
             );
-
             return;
         }
 
         if (event.status() == ConversionStatus.SUCCESS) {
-
             file.setStatus(FileStatus.SUCCESS);
             file.setConvertedBucket(event.bucketName());
             file.setConvertedObjectName(event.objectName());
             file.setErrorMessage(null);
-
         } else {
-
             file.setStatus(FileStatus.ERROR);
             file.setErrorMessage(event.errorMessage());
         }

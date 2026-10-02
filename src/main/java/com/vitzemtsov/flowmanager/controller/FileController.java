@@ -12,7 +12,6 @@ import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -36,16 +35,6 @@ public class FileController {
 
     @GetMapping(ApiPaths.FILE_CONTENT)
     public ResponseEntity<@NonNull InputStreamResource> download(@PathVariable UUID id) {
-        FileService.DownloadResult result = fileService.download(id);
-
-        ContentDisposition disposition = ContentDisposition.attachment()
-                .filename(result.fileName(), StandardCharsets.UTF_8)
-                .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
-                .contentType(MediaType.APPLICATION_PDF)
-                .contentLength(result.size())
-                .body(new InputStreamResource(result.stream()));
+        return fileService.download(id);
     }
 }

@@ -21,10 +21,6 @@ public class MinioService {
         this.properties = properties;
     }
 
-    public String getBucket() {
-        return properties.bucket();
-    }
-
     @PostConstruct
     public void ensureBucketExists() {
         String bucket = properties.bucket();
