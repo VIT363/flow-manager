@@ -52,3 +52,28 @@ FlowManager синхронно принимает файл от клиента, 
 
 Самая долгая операция — конвертация файла — выполняется асинхронно через Kafka. Клиент не ждёт её завершения: он получает ответ сразу, а 
 статус узнаёт отдельным запросом. Это делает систему устойчивой к высокой нагрузке, частым запросам и большим файлам.
+
+
+## Запуск
+
+1. discovery-server (порт 8761)
+2. flow-manager (порт 8081)
+3. file-converter (порт 8083)
+4. api-gateway (порт 8082)
+
+### Требования
+
+- JDK 17+
+- Kafka, MinIO, Postgres (см. README в file-converter)
+- Eureka (см. README в discovery-server)
+
+## Проверка работы
+
+Через Gateway (с OAuth2) — см. README репозитория 'api-gateway'.
+
+FlowManager — OAuth2 Resource Server: принимает только запросы
+с валидным JWT в заголовке 'Authorization: Bearer'. Без токена
+возвращает '401 Unauthorized'.
+
+'/debug/headers' — диагностический эндпоинт для локальной проверки.
+ В production его следует отключить (например, через '@Profile("dev")').
