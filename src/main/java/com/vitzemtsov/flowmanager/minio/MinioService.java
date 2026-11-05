@@ -1,7 +1,7 @@
 package com.vitzemtsov.flowmanager.minio;
 
-import com.vitzemtsov.flowmanager.exception.server.MinioInitializationException;
-import com.vitzemtsov.flowmanager.exception.server.MinioOperationException;
+import com.vitzemtsov.flowmanager.exception.infrastructure.MinioInitializationException;
+import com.vitzemtsov.flowmanager.exception.infrastructure.MinioOperationException;
 import io.minio.*;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;

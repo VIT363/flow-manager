@@ -1,4 +1,4 @@
-package com.vitzemtsov.flowmanager.controller.constants;
+package com.vitzemtsov.flowmanager.constants;
 
 public final class ApiPaths {
 
@@ -11,4 +11,7 @@ public final class ApiPaths {
     public static final String FILE_ID = "/{id}";
     public static final String FILE_STATUS = FILE_ID + "/status";
     public static final String FILE_CONTENT = FILE_ID + "/content";
+
+    public static final String SUBSCRIPTIONS = API_V1 + "/subscriptions";
+    public static final String SUBSCRIPTION_LOGIN = "/{login}";
 }

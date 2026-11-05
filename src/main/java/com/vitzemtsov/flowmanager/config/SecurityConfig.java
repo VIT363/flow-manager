@@ -1,5 +1,7 @@
 package com.vitzemtsov.flowmanager.config;
 
+import com.vitzemtsov.flowmanager.constants.SecurityPaths;
+import com.vitzemtsov.flowmanager.constants.SecurityRoles;
 import com.vitzemtsov.flowmanager.security.KeycloakRealmRoleConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,9 +21,12 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/**").hasAnyRole("USER", "ADMIN")
+                        .requestMatchers(
+                                SecurityPaths.ACTUATOR_HEALTH,
+                                SecurityPaths.ACTUATOR_INFO,
+                                SecurityPaths.ACTUATOR_PROMETHEUS).permitAll()
+                        .requestMatchers(SecurityPaths.API_ADMIN_ALL).hasRole(SecurityRoles.ADMIN)
+                        .requestMatchers(SecurityPaths.API_ALL).hasAnyRole(SecurityRoles.USER, SecurityRoles.ADMIN)
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

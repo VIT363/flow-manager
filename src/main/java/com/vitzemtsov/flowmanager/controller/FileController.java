@@ -1,9 +1,9 @@
 package com.vitzemtsov.flowmanager.controller;
 
-import com.vitzemtsov.flowmanager.controller.dto.FileStatusResponse;
-import com.vitzemtsov.flowmanager.controller.dto.FileUploadResponse;
+import com.vitzemtsov.flowmanager.dto.FileStatusResponse;
+import com.vitzemtsov.flowmanager.dto.FileUploadResponse;
 import com.vitzemtsov.flowmanager.service.FileService;
-import com.vitzemtsov.flowmanager.controller.constants.ApiPaths;
+import com.vitzemtsov.flowmanager.constants.ApiPaths;
 
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
@@ -20,12 +20,11 @@ import java.util.UUID;
 public class FileController {
 
     private final FileService fileService;
-
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<@NonNull FileUploadResponse> upload(@RequestParam("file") MultipartFile file) {
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(fileService.upload(file));
+    public ResponseEntity<@NonNull FileUploadResponse> upload(
+            @RequestParam("file") MultipartFile file) {
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(fileService.upload(file));
     }
 
     @GetMapping(ApiPaths.FILE_STATUS)

@@ -1,4 +1,4 @@
-package com.vitzemtsov.flowmanager.controller.dto;
+package com.vitzemtsov.flowmanager.dto;
 
 import com.vitzemtsov.flowmanager.enums.FileStatus;
 

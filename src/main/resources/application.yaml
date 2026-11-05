@@ -2,6 +2,11 @@ spring:
   application:
     name: flow-manager
 
+  servlet:
+    multipart:
+      max-file-size: 200MB
+      max-request-size: 205MB
+
   security:
     oauth2:
       resourceserver:
@@ -13,6 +18,15 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
+
+  cache:
+    type: redis
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
 
   jpa:
     hibernate:
@@ -69,7 +83,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   info:
     env:
       enabled: true

@@ -1,4 +1,4 @@
-package com.vitzemtsov.flowmanager.exception.server;
+package com.vitzemtsov.flowmanager.exception.infrastructure;
 
 import com.vitzemtsov.flowmanager.exception.basic.FlowManagerException;
 

@@ -1,20 +1,26 @@
 package com.vitzemtsov.flowmanager.service;
 
 import com.vitzemtsov.common.events.FileConversionRequest;
-import com.vitzemtsov.flowmanager.controller.dto.FileStatusResponse;
-import com.vitzemtsov.flowmanager.controller.dto.FileUploadResponse;
+import com.vitzemtsov.flowmanager.dto.FileStatusResponse;
+import com.vitzemtsov.flowmanager.dto.FileUploadResponse;
 import com.vitzemtsov.flowmanager.entity.FileEntity;
 import com.vitzemtsov.flowmanager.enums.FileStatus;
+import com.vitzemtsov.flowmanager.exception.business.FileTooLargeException;
+import com.vitzemtsov.flowmanager.exception.business.InactiveSubscriptionException;
 import com.vitzemtsov.flowmanager.exception.client.EmptyFileException;
 import com.vitzemtsov.flowmanager.exception.client.FileNotFoundException;
 import com.vitzemtsov.flowmanager.exception.client.FileNotReadyException;
-import com.vitzemtsov.flowmanager.exception.server.FileUploadException;
-import com.vitzemtsov.flowmanager.exception.server.MinioOperationException;
+import com.vitzemtsov.flowmanager.exception.infrastructure.FileUploadException;
+import com.vitzemtsov.flowmanager.exception.infrastructure.MinioOperationException;
 import com.vitzemtsov.flowmanager.kafka.producer.FileConversionProducer;
 import com.vitzemtsov.flowmanager.minio.MinioProperties;
 import com.vitzemtsov.flowmanager.minio.MinioService;
 import com.vitzemtsov.flowmanager.repository.FileRepository;
+import com.vitzemtsov.flowmanager.security.CurrentUserService;
+import com.vitzemtsov.flowmanager.subscription.dto.SubscriptionResponse;
+import com.vitzemtsov.flowmanager.subscription.service.SubscriptionLookupService;
 import com.vitzemtsov.flowmanager.util.ObjectNameGenerator;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -43,10 +49,38 @@ public class FileService {
     private final FileConversionProducer fileConversionProducer;
     private final MinioProperties minioProperties;
 
+    private final CurrentUserService currentUserService;
+    private final SubscriptionLookupService subscriptionLookupService;
+
+    private static final long FREE_MAX_FILE_SIZE = 100L * 1024 * 1024;
+
+    private final MeterRegistry meterRegistry;
+
     @Transactional
     public FileUploadResponse upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new EmptyFileException();
+        }
+
+        String login = currentUserService.getLogin();
+
+        SubscriptionResponse subscription =
+                subscriptionLookupService.getByLogin(login);
+
+        if (subscription.subscriptionType()
+                == SubscriptionResponse.SubscriptionType.FREE
+                && file.getSize() > FREE_MAX_FILE_SIZE) {
+            throw new FileTooLargeException(
+                    "FREE subscription allows files up to 100 MiB"
+            );
+        }
+
+        if (subscription.subscriptionType()
+                == SubscriptionResponse.SubscriptionType.PAID
+                && !subscription.activePaidSubscription()) {
+            throw new InactiveSubscriptionException(
+                    "PAID subscription is expired"
+            );
         }
 
         UUID fileId = UUID.randomUUID();
@@ -73,6 +107,8 @@ public class FileService {
         ));
 
         log.info("File uploaded, event sent to to-convert: id={}, objectName={}", fileId, objectName);
+
+        meterRegistry.counter("flowmanager.files.uploaded").increment();
 
         return new FileUploadResponse(fileId, entity.getStatus());
     }
