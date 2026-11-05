@@ -20,6 +20,7 @@ import com.vitzemtsov.flowmanager.security.CurrentUserService;
 import com.vitzemtsov.flowmanager.subscription.dto.SubscriptionResponse;
 import com.vitzemtsov.flowmanager.subscription.service.SubscriptionLookupService;
 import com.vitzemtsov.flowmanager.util.ObjectNameGenerator;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
@@ -52,6 +53,8 @@ public class FileService {
     private final SubscriptionLookupService subscriptionLookupService;
 
     private static final long FREE_MAX_FILE_SIZE = 100L * 1024 * 1024;
+
+    private final MeterRegistry meterRegistry;
 
     @Transactional
     public FileUploadResponse upload(MultipartFile file) {
@@ -104,6 +107,8 @@ public class FileService {
         ));
 
         log.info("File uploaded, event sent to to-convert: id={}, objectName={}", fileId, objectName);
+
+        meterRegistry.counter("flowmanager.files.uploaded").increment();
 
         return new FileUploadResponse(fileId, entity.getStatus());
     }

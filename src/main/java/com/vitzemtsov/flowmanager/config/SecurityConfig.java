@@ -21,7 +21,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(SecurityPaths.ACTUATOR_HEALTH, SecurityPaths.ACTUATOR_INFO).permitAll()
+                        .requestMatchers(
+                                SecurityPaths.ACTUATOR_HEALTH,
+                                SecurityPaths.ACTUATOR_INFO,
+                                SecurityPaths.ACTUATOR_PROMETHEUS).permitAll()
                         .requestMatchers(SecurityPaths.API_ADMIN_ALL).hasRole(SecurityRoles.ADMIN)
                         .requestMatchers(SecurityPaths.API_ALL).hasAnyRole(SecurityRoles.USER, SecurityRoles.ADMIN)
                         .anyRequest().authenticated()
